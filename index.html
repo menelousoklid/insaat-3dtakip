@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>İnşaat Takip Pro v8</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; background: #0f172a; color: #f1f5f9; overflow: hidden; }
+        @media (min-width: 768px) { body { flex-direction: row; } }
+
+        /* ── LOGIN EKRANI ── */
+        #loginScreen {
+            position: fixed; inset: 0; background: #0f172a;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; flex-direction: column; gap: 12px;
+        }
+        #loginScreen.hidden { display: none; }
+        .login-box {
+            background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+            padding: 32px 28px; width: 100%; max-width: 340px;
+        }
+        .login-box h1 { color: #38bdf8; font-size: 1.1em; margin: 0 0 6px; text-align: center; }
+        .login-box p  { color: #64748b; font-size: 0.75em; text-align: center; margin: 0 0 20px; }
+        .login-box label { font-size: 0.72em; color: #94a3b8; display: block; margin-bottom: 4px; margin-top: 10px; }
+        .login-box input { width: 100%; padding: 9px 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 0.9em; }
+        .login-box input:focus { outline: none; border-color: #38bdf8; }
+        #loginError { color: #ef4444; font-size: 0.75em; text-align: center; min-height: 18px; margin-top: 8px; }
+        #loginUrlNote { font-size: 0.68em; color: #475569; text-align: center; margin-top: 10px; }
+
+        /* ── USER BADGE ── */
+        #userBadge {
+            display: flex; align-items: center; gap: 8px;
+            background: #0f172a; border: 1px solid #334155;
+            border-radius: 6px; padding: 6px 10px; margin-bottom: 2px;
+        }
+        #userBadge .avatar { width: 26px; height: 26px; border-radius: 50%; background: #38bdf8; color: #0f172a; font-weight: bold; font-size: 0.8em; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        #userBadge .uname  { flex: 1; font-size: 0.8em; font-weight: bold; }
+        #userBadge .urole  { font-size: 0.65em; color: #64748b; }
+        #logoutBtn { font-size: 0.7em; color: #ef4444; cursor: pointer; padding: 2px 6px; border: 1px solid #ef444440; border-radius: 4px; }
+        #logoutBtn:hover { background: #ef444420; }
+
+        #sidebar { width: 100%; max-height: 45%; background: #1e293b; padding: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 100; overflow-y: auto; border-bottom: 2px solid #334155; }
+        @media (min-width: 768px) { #sidebar { width: 330px; max-height: 100%; border-bottom: none; border-right: 2px solid #334155; } }
+
+        #viewport { flex-grow: 1; position: relative; touch-action: none; }
+        
+        h2 { color: #38bdf8; font-size: 0.9em; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .section-title { font-size: 0.65em; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 6px; border-top: 1px solid #334155; padding-top: 10px; }
+        .group { margin-bottom: 10px; }
+        label { display: block; font-size: 0.72em; color: #94a3b8; margin-bottom: 4px; }
+        select, input[type="text"], input[type="number"], input[type="password"] { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 0.85em; }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus, select:focus { outline: none; border-color: #38bdf8; }
+        
+        .btn { width: 100%; padding: 9px; border-radius: 6px; border: none; color: white; cursor: pointer; font-size: 0.85em; font-weight: bold; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.85; }
+        .btn:active { opacity: 0.7; }
+        .btn-blue { background: #3b82f6; }
+        .btn-green { background: #10b981; }
+        .btn-red { background: #ef4444; }
+        .btn-yellow { background: #eab308; color: #0f172a; }
+        .btn-gray { background: #475569; }
+        .btn-row { display: flex; gap: 6px; margin-top: 5px; }
+        .btn-row .btn { flex: 1; }
+
+        #blockList { list-style: none; margin: 0; padding: 0; max-height: 120px; overflow-y: auto; }
+        #blockList li { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; background: #0f172a; border-radius: 5px; margin-bottom: 4px; font-size: 0.8em; cursor: pointer; border: 1px solid #334155; transition: border-color 0.2s; }
+        #blockList li.selected { border-color: #38bdf8; background: #0d2035; }
+        #blockList li span.remove-btn { color: #ef4444; cursor: pointer; font-size: 1.1em; padding: 0 4px; }
+        #blockList li span.block-name { flex: 1; }
+        #blockList li span.block-floors { color: #64748b; font-size: 0.85em; margin-right: 6px; }
+
+        #typeList { list-style: none; margin: 0; padding: 0; max-height: 100px; overflow-y: auto; }
+        #typeList li { display: flex; align-items: center; justify-content: space-between; padding: 5px 8px; background: #0f172a; border-radius: 5px; margin-bottom: 3px; font-size: 0.8em; border: 1px solid #334155; }
+        #typeList li span.color-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        #typeList li span.type-name { flex: 1; }
+        #typeList li span.remove-type-btn { color: #ef4444; cursor: pointer; font-size: 1.1em; padding: 0 4px; }
+
+        .add-form { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px; margin-top: 8px; }
+        .add-form .row { display: flex; gap: 6px; }
+        .add-form .row input { flex: 1; }
+        .add-form .row input[type="number"] { width: 60px; flex: none; }
+
+        #modeIndicator { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(14,165,233,0.2); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 14px; border-radius: 20px; font-size: 0.75em; pointer-events: none; display: none; }
+        #info-card { position: absolute; top: 10px; right: 10px; background: rgba(30, 41, 59, 0.92); padding: 10px 12px; border-radius: 8px; border: 1px solid #38bdf8; font-size: 0.78em; pointer-events: none; min-width: 140px; }
+        
+        .color-row { display: flex; gap: 5px; margin-bottom: 6px; flex-wrap: wrap; }
+        .color-swatch { width: 22px; height: 22px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
+        .color-swatch.selected { border-color: white; }
+        .hint { font-size: 0.65em; color: #475569; margin-top: 8px; line-height: 1.5; }
+        .status-ok   { color: #10b981 !important; }
+        .status-err  { color: #ef4444 !important; }
+        .status-load { color: #eab308 !important; }
+        #saveBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Kilitli alan göstergesi */
+        .locked { opacity: 0.35; pointer-events: none; position: relative; }
+        .locked::after { content: '🔒'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 1.2em; }
+    </style>
+</head>
+<body>
+
+<!-- ── GİRİŞ EKRANI ── -->
+<div id="loginScreen">
+    <div class="login-box">
+        <h1>🏗️ İNŞAAT TAKİP</h1>
+        <p>Devam etmek için giriş yapın</p>
+        <label>Apps Script URL</label>
+        <input type="text" id="loginUrl" placeholder="https://script.google.com/macros/s/..." style="font-size:0.72em;">
+        <label style="margin-top:10px;">Kullanıcı Adı</label>
+        <input type="text" id="loginUser" placeholder="kullanici_adi" autocomplete="username">
+        <label>Şifre</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+        <div id="loginError"></div>
+        <button class="btn btn-blue" style="margin-top:14px;" onclick="doLogin()">Giriş Yap</button>
+        <div id="loginUrlNote">URL bir kez girildiğinde hatırlanır.</div>
+    </div>
+</div>
+
+<div id="sidebar">
+    <h2>🏗️ SAHA TAKİP v8</h2>
+
+    <!-- KULLANICI BADGE -->
+    <div id="userBadge" style="display:none;">
+        <div class="avatar" id="userAvatar">?</div>
+        <div style="flex:1;">
+            <div class="uname" id="userNameLabel">—</div>
+            <div class="urole" id="userRoleLabel">—</div>
+        </div>
+        <span id="logoutBtn" onclick="doLogout()">Çıkış</span>
+    </div>
+
+    <!-- KİLİT BUTONU -->
+    <button class="btn" id="lockBtn" onclick="toggleEditLock()" style="margin-bottom:2px; background:#475569; display:none;">
+        🔒 Düzenleme Kapalı — Aç
+    </button>
+
+    <!-- GOOGLE SHEETS BAĞLANTISI -->
+    <div class="section-title">☁️ Google Sheets Bağlantısı</div>
+    <div class="add-form" id="sheetsSetup">
+        <label>Apps Script Web App URL</label>
+        <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/..." style="margin-bottom:6px; font-size:0.75em;">
+        <div class="btn-row">
+            <button class="btn btn-blue" onclick="connectSheets()">Bağlan &amp; Yükle</button>
+            <button class="btn btn-gray" onclick="saveToSheets()" id="saveBtn" disabled>💾 Kaydet</button>
+        </div>
+        <div id="syncStatus" style="font-size:0.68em; margin-top:6px; color:#64748b;">Bağlı değil</div>
+    </div>
+
+    <!-- BLOCK MANAGEMENT -->
+    <div class="section-title">📦 Blok Yönetimi</div>
+    <ul id="blockList"></ul>
+
+    <div class="add-form" id="addBlockSection">
+        <label>Blok Ekle</label>
+        <div class="row">
+            <input type="text" id="newBlockName" placeholder="Blok adı" maxlength="12">
+            <input type="number" id="newBlockFloors" value="6" min="1" max="20" title="Kat sayısı">
+        </div>
+        <button class="btn btn-blue" style="margin-top:6px;" onclick="addBlock()">+ Blok Ekle</button>
+    </div>
+
+    <!-- SELECTED BLOCK OPERATIONS -->
+    <div class="section-title">⚙️ Seçili Blok İşlemleri</div>
+    <div id="blockOpSection">
+        <div class="group">
+            <label>İmalat Türü</label>
+            <select id="typeSel" onchange="refreshSceneColors()"></select>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-green" onclick="updateCurrentBlock(2)">Tümünü Bitir</button>
+            <button class="btn btn-red" onclick="updateCurrentBlock(0)">Sıfırla</button>
+        </div>
+    </div>
+
+    <!-- DRAG MODE -->
+    <div id="dragSection">
+        <div class="section-title">🖱️ Blok Konumu</div>
+        <div class="btn-row">
+            <button class="btn btn-yellow" id="dragModeBtn" onclick="toggleDragMode()">Taşıma Modu: KAPALI</button>
+        </div>
+        <div class="hint">Taşıma modunu açın, ardından bloğa tıklayıp sürükleyin.</div>
+    </div>
+
+    <!-- TYPE MANAGEMENT -->
+    <div class="section-title">🔧 İmalat Türleri</div>
+    <ul id="typeList"></ul>
+
+    <div class="add-form" id="addTypeSection">
+        <label>Yeni İmalat Türü</label>
+        <input type="text" id="newTypeName" placeholder="Tür adı" maxlength="20" style="margin-bottom:6px;">
+        <label>Renk</label>
+        <div class="color-row" id="colorSwatches"></div>
+        <button class="btn btn-blue" onclick="addType()">+ Tür Ekle</button>
+    </div>
+</div>
+
+<div id="viewport">
+    <div id="info-card">
+        <span id="infoDetail">Bir kata dokunun...</span>
+    </div>
+    <div id="modeIndicator">✋ Taşıma Modu Aktif</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+
+// ============================
+// APP STATE
+// ============================
+const PALETTE_COLORS = ['#3b82f6','#f97316','#f1f5f9','#10b981','#a855f7','#ec4899','#f59e0b','#06b6d4','#84cc16','#ef4444'];
+const PALETTE_HEX    = [0x3b82f6, 0xf97316, 0xf1f5f9, 0x10b981, 0xa855f7, 0xec4899, 0xf59e0b, 0x06b6d4, 0x84cc16, 0xef4444];
+
+let constructionTypes = [
+    { name: 'Betonarme', colorHex: 0x3b82f6, colorCSS: '#3b82f6' },
+    { name: 'Duvar',     colorHex: 0xf97316, colorCSS: '#f97316' },
+    { name: 'Sıva',      colorHex: 0xf1f5f9, colorCSS: '#f1f5f9' },
+    { name: 'Pencere',   colorHex: 0x10b981,  colorCSS: '#10b981' },
+];
+
+let blockDefs = [
+    { name: 'ADA',    floors: 6, x: -6, z: 0 },
+    { name: 'AD54',   floors: 6, x: 0,  z: 0 },
+    { name: 'BLOCK3', floors: 6, x: 6,  z: 0 },
+];
+
+let selectedBlockName = blockDefs[0].name;
+let selectedColorIdx = 0;
+let dragMode = false;
+let isDragging = false;
+let dragBlock = null;
+let dragPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+let dragOffset = new THREE.Vector3();
+let dragTarget = new THREE.Vector3();
+
+// ============================
+// THREE.JS SETUP
+// ============================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f172a);
+
+// Grid
+const gridHelper = new THREE.GridHelper(40, 40, 0x1e3a5f, 0x1e2a3f);
+scene.add(gridHelper);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = true;
+document.getElementById('viewport').appendChild(renderer.domElement);
+
+const orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+orbitControls.enableDamping = true;
+orbitControls.target.set(0, 3, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+dirLight.position.set(15, 25, 15);
+dirLight.castShadow = true;
+scene.add(dirLight);
+
+camera.position.set(16, 14, 16);
+
+// ============================
+// BUILDINGS MAP
+// ============================
+const buildings = {}; // name -> { floors: [...meshes], label: Mesh, pivot: Group }
+
+function getTypeColor(typeName, state) {
+    if (state === 0) return 0x475569;
+    if (state === 1) return 0xeab308;
+    const t = constructionTypes.find(t => t.name === typeName);
+    return t ? t.colorHex : 0x10b981;
+}
+
+function buildFloorStates(types) {
+    const s = {};
+    types.forEach(t => { s[t.name] = 0; });
+    return s;
+}
+
+function ensureFloorHasAllTypes(floor) {
+    constructionTypes.forEach(t => {
+        if (!(t.name in floor.userData.states)) {
+            floor.userData.states[t.name] = 0;
+        }
+    });
+}
+
+function createBlockMeshes(def) {
+    // Remove old if exists
+    if (buildings[def.name]) {
+        scene.remove(buildings[def.name].pivot);
+    }
+
+    const pivot = new THREE.Group();
+    pivot.position.set(def.x, 0, def.z ?? 0);
+    pivot.userData.blockName = def.name;
+    scene.add(pivot);
+
+    const floors = [];
+    for (let i = 0; i < def.floors; i++) {
+        const geo = new THREE.BoxGeometry(2.8, 0.75, 2.8);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x475569 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(0, i * 0.9 + 0.375, 0);
+        mesh.castShadow = true;
+        mesh.userData = {
+            block: def.name,
+            floor: i + 1,
+            states: buildFloorStates(constructionTypes)
+        };
+        pivot.add(mesh);
+        floors.push(mesh);
+    }
+
+    // Label
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgba(30,41,59,0.85)';
+    ctx.roundRect(4,4,248,56,10);
+    ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 28px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(def.name, 128, 32);
+    const tex = new THREE.CanvasTexture(canvas);
+    const labelGeo = new THREE.PlaneGeometry(2.5, 0.6);
+    const labelMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+    const label = new THREE.Mesh(labelGeo, labelMat);
+    label.position.set(0, def.floors * 0.9 + 0.8, 0);
+    label.rotation.x = -0.2;
+    label.userData.isLabel = true;
+    pivot.add(label);
+
+    buildings[def.name] = { floors, pivot, def };
+}
+
+// Init blocks
+blockDefs.forEach(def => createBlockMeshes(def));
+
+// ============================
+// REFRESH COLORS
+// ============================
+function refreshSceneColors() {
+    const type = document.getElementById('typeSel').value;
+    Object.values(buildings).forEach(b => {
+        b.floors.forEach(f => {
+            ensureFloorHasAllTypes(f);
+            const s = f.userData.states[type] || 0;
+            f.material.color.setHex(getTypeColor(type, s));
+        });
+    });
+}
+
+// ============================
+// RAYCASTER / CLICK
+// ============================
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function getAllFloorMeshes() {
+    return Object.values(buildings).flatMap(b => b.floors);
+}
+function getAllPivots() {
+    return Object.values(buildings).map(b => b.pivot);
+}
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    const bounds = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX - bounds.left) / bounds.width) * 2 - 1;
+    mouse.y = -((e.clientY - bounds.top) / bounds.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    if (dragMode) {
+        const intersects = raycaster.intersectObjects(getAllFloorMeshes(), false);
+        if (intersects.length > 0) {
+            const hit = intersects[0].object;
+            if (hit.userData.block) {
+                const bName = hit.userData.block;
+
+                // Taşıma yetki kontrolü
+                if (!canDragBlock(bName)) {
+                    document.getElementById('infoDetail').innerHTML = '🔒 Bu bloğu taşıma yetkiniz yok';
+                    return;
+                }
+
+                dragBlock = buildings[bName].pivot;
+                isDragging = true;
+                orbitControls.enabled = false;
+                dragPlane.set(new THREE.Vector3(0,1,0), 0);
+                const pt = new THREE.Vector3();
+                raycaster.ray.intersectPlane(dragPlane, pt);
+                dragOffset.copy(dragBlock.position).sub(pt);
+                dragOffset.y = 0;
+                selectedBlockName = bName;
+                renderBlockList();
+            }
+        }
+    } else {
+        // Normal click: toggle floor state
+        const intersects = raycaster.intersectObjects(getAllFloorMeshes(), false);
+        if (intersects.length > 0) {
+            const floor = intersects[0].object;
+            if (floor.userData.block) {
+                const type = document.getElementById('typeSel').value;
+                // Kilit kontrolü
+                if (editLocked) { showLockWarning(); return; }
+                // Yetki kontrolü
+                if (!canEditBlock(floor.userData.block)) {
+                    showInfo(floor, type, '🔒 Bu bloğu düzenleme yetkiniz yok');
+                    return;
+                }
+                if (!canEditType(type)) {
+                    showInfo(floor, type, '🔒 Bu imalat türünü düzenleme yetkiniz yok');
+                    return;
+                }
+                ensureFloorHasAllTypes(floor);
+                floor.userData.states[type] = (floor.userData.states[type] + 1) % 3;
+                refreshSceneColors();
+                showInfo(floor, type);
+                autoSaveState(floor, type);
+                // Select block
+                selectedBlockName = floor.userData.block;
+                renderBlockList();
+            }
+        }
+    }
+});
+
+renderer.domElement.addEventListener('pointermove', (e) => {
+    if (!isDragging || !dragBlock) return;
+    const bounds = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX - bounds.left) / bounds.width) * 2 - 1;
+    mouse.y = -((e.clientY - bounds.top) / bounds.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const pt = new THREE.Vector3();
+    raycaster.ray.intersectPlane(dragPlane, pt);
+    dragBlock.position.x = pt.x + dragOffset.x;
+    dragBlock.position.z = pt.z + dragOffset.z;
+    // Update def — hem X hem Z kaydet
+    const bName = dragBlock.userData.blockName;
+    const def = blockDefs.find(d => d.name === bName);
+    if (def) { def.x = dragBlock.position.x; def.z = dragBlock.position.z; }
+});
+
+renderer.domElement.addEventListener('pointerup', () => {
+    if (isDragging) {
+        isDragging = false;
+        dragBlock = null;
+        orbitControls.enabled = true;
+    }
+});
+
+// ============================
+// BLOCK MANAGEMENT
+// ============================
+function addBlock() {
+    const nameInput = document.getElementById('newBlockName');
+    const floorsInput = document.getElementById('newBlockFloors');
+    let name = nameInput.value.trim().toUpperCase();
+    let floors = parseInt(floorsInput.value) || 6;
+    floors = Math.max(1, Math.min(20, floors));
+
+    if (!name) { alert('Blok adı giriniz!'); return; }
+    if (buildings[name]) { alert('Bu isimde blok zaten var!'); return; }
+
+    // Auto position: find rightmost x
+    const maxX = blockDefs.length > 0 ? Math.max(...blockDefs.map(d => d.x)) : -4;
+    const newX = maxX + 5;
+
+    const def = { name, floors, x: newX };
+    blockDefs.push(def);
+    createBlockMeshes(def);
+
+    nameInput.value = '';
+    floorsInput.value = 6;
+    selectedBlockName = name;
+    renderBlockList();
+    refreshSceneColors();
+}
+
+function removeBlock(name) {
+    if (!confirm(name + ' bloğunu silmek istiyor musunuz?')) return;
+    if (buildings[name]) {
+        scene.remove(buildings[name].pivot);
+        delete buildings[name];
+    }
+    blockDefs = blockDefs.filter(d => d.name !== name);
+    if (selectedBlockName === name) {
+        selectedBlockName = blockDefs[0]?.name || null;
+    }
+    deleteBlockFromSheets(name);
+    renderBlockList();
+}
+
+function selectBlock(name) {
+    selectedBlockName = name;
+    renderBlockList();
+}
+
+function renderBlockList() {
+    const list = document.getElementById('blockList');
+    list.innerHTML = '';
+    blockDefs.forEach(def => {
+        const li = document.createElement('li');
+        li.className = def.name === selectedBlockName ? 'selected' : '';
+        li.innerHTML = `
+            <span class="block-name" onclick="selectBlock('${def.name}')">${def.name}</span>
+            <span class="block-floors" onclick="selectBlock('${def.name}')">${def.floors} kat</span>
+            <span class="remove-btn" onclick="removeBlock('${def.name}')" title="Sil">✕</span>
+        `;
+        list.appendChild(li);
+    });
+}
+
+// ============================
+// TYPE MANAGEMENT
+// ============================
+function addType() {
+    const nameInput = document.getElementById('newTypeName');
+    const name = nameInput.value.trim();
+    if (!name) { alert('Tür adı giriniz!'); return; }
+    if (constructionTypes.find(t => t.name === name)) { alert('Bu isimde tür zaten var!'); return; }
+
+    const colorHex = PALETTE_HEX[selectedColorIdx];
+    const colorCSS = PALETTE_COLORS[selectedColorIdx];
+    constructionTypes.push({ name, colorHex, colorCSS });
+
+    // Add state to all existing floors
+    Object.values(buildings).forEach(b => {
+        b.floors.forEach(f => { f.userData.states[name] = 0; });
+    });
+
+    nameInput.value = '';
+    renderTypeList();
+    renderTypeSelect();
+}
+
+function removeType(name) {
+    const builtins = ['Betonarme','Duvar','Sıva','Pencere'];
+    if (constructionTypes.length <= 1) { alert('En az 1 tür olmalı!'); return; }
+    constructionTypes = constructionTypes.filter(t => t.name !== name);
+    renderTypeList();
+    renderTypeSelect();
+    refreshSceneColors();
+}
+
+function renderTypeList() {
+    const list = document.getElementById('typeList');
+    list.innerHTML = '';
+    constructionTypes.forEach(t => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span class="color-dot" style="background:${t.colorCSS}"></span>
+            <span class="type-name">${t.name}</span>
+            <span class="remove-type-btn" onclick="removeType('${t.name}')" title="Sil">✕</span>
+        `;
+        list.appendChild(li);
+    });
+}
+
+function renderTypeSelect() {
+    const sel = document.getElementById('typeSel');
+    const prev = sel.value;
+    sel.innerHTML = '';
+    constructionTypes.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.name;
+        opt.textContent = t.name;
+        sel.appendChild(opt);
+    });
+    if (constructionTypes.find(t => t.name === prev)) sel.value = prev;
+    refreshSceneColors();
+}
+
+function renderColorSwatches() {
+    const container = document.getElementById('colorSwatches');
+    container.innerHTML = '';
+    PALETTE_COLORS.forEach((c, i) => {
+        const div = document.createElement('div');
+        div.className = 'color-swatch' + (i === selectedColorIdx ? ' selected' : '');
+        div.style.background = c;
+        div.onclick = () => {
+            selectedColorIdx = i;
+            renderColorSwatches();
+        };
+        container.appendChild(div);
+    });
+}
+
+// ============================
+// KİLİT SİSTEMİ
+// ============================
+let editLocked = true; // Başlangıçta kilitli — telefonda kazara dokunma önlemi
+
+function toggleEditLock() {
+    editLocked = !editLocked;
+    updateLockBtn();
+}
+
+function updateLockBtn() {
+    const btn = document.getElementById('lockBtn');
+    if (!btn) return;
+    if (editLocked) {
+        btn.textContent = '🔒 Düzenleme Kapalı — Açmak için dokun';
+        btn.style.background = '#475569';
+    } else {
+        btn.textContent = '✏️ Düzenleme Açık — Kilitlemek için dokun';
+        btn.style.background = '#10b981';
+    }
+}
+
+function showLockWarning() {
+    document.getElementById('infoDetail').innerHTML =
+        '🔒 Düzenleme kilitli<br><span style="font-size:0.85em;color:#94a3b8;">Sol panelden kilidi açın</span>';
+}
+
+
+function toggleDragMode() {
+    if (editLocked) { showLockWarning(); return; }
+    dragMode = !dragMode;
+    const btn = document.getElementById('dragModeBtn');
+    btn.textContent = 'Taşıma Modu: ' + (dragMode ? 'AÇIK' : 'KAPALI');
+    btn.style.background = dragMode ? '#10b981' : '#eab308';
+    btn.style.color = dragMode ? 'white' : '#0f172a';
+    document.getElementById('modeIndicator').style.display = dragMode ? 'block' : 'none';
+    orbitControls.enabled = !dragMode || !isDragging;
+    if (!dragMode) orbitControls.enabled = true;
+}
+
+// ============================
+// BLOCK OPS
+// ============================
+function updateCurrentBlock(val) {
+    if (!selectedBlockName) return;
+    if (editLocked) { showLockWarning(); return; }
+    const currentType = document.getElementById('typeSel').value;
+
+    if (!canEditBlock(selectedBlockName)) {
+        setStatus('🔒 Bu bloğu düzenleme yetkiniz yok', 'status-err'); return;
+    }
+    if (!canEditType(currentType)) {
+        setStatus('🔒 ' + currentType + ' imalatını düzenleme yetkiniz yok', 'status-err'); return;
+    }
+
+    buildings[selectedBlockName]?.floors.forEach(f => {
+        ensureFloorHasAllTypes(f);
+        f.userData.states[currentType] = val;
+    });
+    refreshSceneColors();
+
+    if (sheetsConnected) {
+        buildings[selectedBlockName]?.floors.forEach(f => autoSaveState(f, currentType));
+    }
+}
+
+function showInfo(f, t, overrideMsg) {
+    if (overrideMsg) {
+        document.getElementById('infoDetail').innerHTML = overrideMsg;
+        return;
+    }
+    const states = ['BAŞLAMADI','DEVAM EDİYOR','TAMAMLANDI'];
+    const s = states[f.userData.states[t] || 0];
+    const type = constructionTypes.find(x => x.name === t);
+    const dot = type ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${type.colorCSS};margin-right:4px;"></span>` : '';
+    document.getElementById('infoDetail').innerHTML = `<b>${f.userData.block} — Kat ${f.userData.floor}</b><br>${dot}${t}: ${s}`;
+}
+
+// ============================
+// GOOGLE SHEETS ENTEGRASYONU
+// ============================
+let SCRIPT_URL = localStorage.getItem('scriptUrl') || '';
+let sheetsConnected = false;
+let saveDebounceTimer = null;
+
+// ============================
+// KİMLİK DOĞRULAMA
+// ============================
+let currentUser = null;
+let SESSION_TOKEN = localStorage.getItem('sessionToken') || '';
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !document.getElementById('loginScreen').classList.contains('hidden')) doLogin();
+});
+
+window.addEventListener('load', () => {
+    const savedUrl = localStorage.getItem('scriptUrl') || '';
+    if (savedUrl) document.getElementById('loginUrl').value = savedUrl;
+
+    const saved = localStorage.getItem('insaatUser');
+    if (saved && SESSION_TOKEN) {
+        try {
+            const raw = JSON.parse(saved);
+            const allowedBlocks = Array.isArray(raw.allowedBlocks) ? raw.allowedBlocks : parseList(raw.allowedBlocks);
+            const allowedTypes  = Array.isArray(raw.allowedTypes)  ? raw.allowedTypes  : parseList(raw.allowedTypes);
+            currentUser = {
+                ...raw,
+                allowedBlocks,
+                allowedTypes,
+                isAdmin:  allowedBlocks.includes('*') && allowedTypes.includes('*'),
+                isViewer: allowedBlocks.length === 0 && allowedTypes.length === 0,
+            };
+            SCRIPT_URL  = localStorage.getItem('scriptUrl') || '';
+            document.getElementById('scriptUrl').value = SCRIPT_URL;
+            showApp();
+            connectSheets();
+        } catch(e) { showLoginScreen(); }
+    } else {
+        showLoginScreen();
+    }
+});
+
+function showLoginScreen() {
+    document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+function showApp() {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('userBadge').style.display = 'flex';
+    document.getElementById('userNameLabel').textContent = currentUser.username;
+    document.getElementById('userRoleLabel').textContent = roleLabel(currentUser.role);
+    document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+    // Viewer değilse kilit butonunu göster
+    if (!currentUser.isViewer) {
+        document.getElementById('lockBtn').style.display = '';
+        editLocked = true;
+        updateLockBtn();
+    }
+    applyPermissions();
+}
+
+function roleLabel(r) {
+    if (!currentUser) return r;
+    if (currentUser.isAdmin)  return '👑 ' + r;
+    if (currentUser.isViewer) return '👁️ ' + r;
+    return '🔧 ' + r;
+}
+
+async function doLogin() {
+    const urlVal  = document.getElementById('loginUrl').value.trim();
+    const userVal = document.getElementById('loginUser').value.trim();
+    const passVal = document.getElementById('loginPass').value;
+    const errEl   = document.getElementById('loginError');
+
+    if (!urlVal)  { errEl.textContent = 'URL boş olamaz'; return; }
+    if (!userVal) { errEl.textContent = 'Kullanıcı adı boş olamaz'; return; }
+    if (!passVal) { errEl.textContent = 'Şifre boş olamaz'; return; }
+
+    errEl.textContent = '⏳ Doğrulanıyor...';
+    SCRIPT_URL = urlVal;
+    localStorage.setItem('scriptUrl', urlVal);
+
+    try {
+        const res = await gasGET({ action: 'login', username: userVal, password: passVal });
+        if (!res.ok) { errEl.textContent = '❌ ' + (res.error || 'Giriş başarısız'); return; }
+
+        SESSION_TOKEN = res.token;
+        localStorage.setItem('sessionToken', SESSION_TOKEN);
+
+        const allowedBlocks = parseList(res.user.YetkiliBloklar);
+        const allowedTypes  = parseList(res.user.YetkiliImalatlar);
+        // YetkiliBloklar=* VE YetkiliImalatlar=* → tam yetki (admin)
+        const isAdmin  = allowedBlocks.includes('*') && allowedTypes.includes('*');
+        // Her ikisi de boş → sadece görüntüleme
+        const isViewer = allowedBlocks.length === 0 && allowedTypes.length === 0;
+
+        currentUser = {
+            username:     res.user.KullaniciAdi,
+            role:         res.user.Rol,
+            allowedBlocks,
+            allowedTypes,
+            isAdmin,
+            isViewer,
+        };
+        localStorage.setItem('insaatUser', JSON.stringify(currentUser));
+        document.getElementById('scriptUrl').value = SCRIPT_URL;
+        showApp();
+        connectSheets();
+    } catch(e) {
+        errEl.textContent = '❌ Bağlantı hatası: ' + e.message;
+    }
+}
+
+async function doLogout() {
+    if (!confirm('Çıkış yapmak istiyor musunuz?')) return;
+    // Sunucuda token'ı iptal et
+    if (SESSION_TOKEN) {
+        try { await gasGET({ action: 'logout', token: SESSION_TOKEN }); } catch(e) {}
+    }
+    localStorage.removeItem('insaatUser');
+    localStorage.removeItem('sessionToken');
+    currentUser    = null;
+    SESSION_TOKEN  = '';
+    sheetsConnected = false;
+    document.getElementById('saveBtn').disabled = true;
+    document.getElementById('userBadge').style.display = 'none';
+    showLoginScreen();
+}
+
+// ── Yetki kontrolleri ────────────────────────────────────────
+// ── Yetki kontrolleri ────────────────────────────────────────
+
+// Sheets'ten gelen virgülle ayrılmış listeyi diziye çevir
+function parseList(val) {
+    if (!val) return [];
+    return String(val).split(/[,،\s]+/).map(s => s.trim()).filter(Boolean);
+}
+
+// Büyük/küçük harf duyarsız liste kontrolü
+function listIncludes(list, value) {
+    if (!list || !value) return false;
+    const v = String(value).trim().toUpperCase();
+    return list.some(item => String(item).trim().toUpperCase() === v || item.trim() === '*');
+}
+
+function canEditBlock(blockName) {
+    if (!currentUser) return false;
+    if (currentUser.isAdmin) return true;
+    if (currentUser.isViewer) return false;
+    return listIncludes(currentUser.allowedBlocks, blockName);
+}
+
+function canEditType(typeName) {
+    if (!currentUser) return false;
+    if (currentUser.isAdmin) return true;
+    if (currentUser.isViewer) return false;
+    return listIncludes(currentUser.allowedTypes, typeName);
+}
+
+function canDragBlock(blockName) {
+    if (!currentUser) return false;
+    if (currentUser.isAdmin) return true;
+    if (currentUser.isViewer) return false;
+    // Bloğu taşıyabilmek için hem bloğa hem de en az bir imalata yetkisi olmalı
+    return listIncludes(currentUser.allowedBlocks, blockName);
+}
+
+function canManage() { return currentUser?.isAdmin; }
+
+function applyPermissions() {
+    const isAdmin  = currentUser?.isAdmin;
+    const isViewer = currentUser?.isViewer;
+
+    // Blok/tür ekleme-silme → sadece tam yetkili (isAdmin)
+    ['addBlockSection', 'addTypeSection'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = isAdmin ? '' : 'none';
+    });
+
+    // Taşıma modu → viewer hariç herkes görebilir (canDragBlock zaten kontrol eder)
+    const dragEl = document.getElementById('dragSection');
+    if (dragEl) dragEl.style.display = isViewer ? 'none' : '';
+
+    // Toplu işlem butonları → viewer göremez
+    const bopEl = document.getElementById('blockOpSection');
+    if (bopEl) bopEl.style.display = isViewer ? 'none' : '';
+
+    // Kaydet → viewer'a kapalı
+    if (isViewer) document.getElementById('saveBtn').disabled = true;
+}
+
+function setStatus(msg, cls) {
+    const el = document.getElementById('syncStatus');
+    el.textContent = msg;
+    el.className = '';
+    if (cls) el.classList.add(cls);
+}
+
+// ── GET isteği ───────────────────────────────────────────────
+async function gasGET(params) {
+    const url = new URL(SCRIPT_URL);
+    if (SESSION_TOKEN && !params.token) params.token = SESSION_TOKEN;
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    const res  = await fetch(url.toString(), { redirect: 'follow' });
+    const json = JSON.parse(await res.text());
+    if (json.error === 'AUTH_REQUIRED') { forceLogout(); throw new Error('Oturum süresi doldu'); }
+    return json;
+}
+
+// ── POST isteği ──────────────────────────────────────────────
+async function gasPOST(body) {
+    if (SESSION_TOKEN && !body.token) body.token = SESSION_TOKEN;
+    await fetch(SCRIPT_URL, {
+        method:  'POST',
+        mode:    'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body:    JSON.stringify(body)
+    });
+    await new Promise(r => setTimeout(r, 1500));
+}
+
+function forceLogout() {
+    localStorage.removeItem('insaatUser');
+    localStorage.removeItem('sessionToken');
+    currentUser   = null;
+    SESSION_TOKEN = '';
+    sheetsConnected = false;
+    document.getElementById('saveBtn').disabled = true;
+    document.getElementById('userBadge').style.display = 'none';
+    showLoginScreen();
+    document.getElementById('loginError').textContent = '⚠️ Oturumunuz sona erdi, tekrar giriş yapın.';
+}
+
+// ── Bağlan ve veriyi yükle ───────────────────────────────────
+async function connectSheets() {
+    const url = document.getElementById('scriptUrl').value.trim();
+    if (!url) { setStatus('❌ URL boş olamaz', 'status-err'); return; }
+    SCRIPT_URL = url;
+    localStorage.setItem('scriptUrl', url);
+    setStatus('⏳ Bağlanıyor...', 'status-load');
+    try {
+        const json = await gasGET({ action: 'load' });
+        if (!json.ok) throw new Error(json.error || 'Bilinmeyen hata');
+        loadFromSheets(json);
+        sheetsConnected = true;
+        document.getElementById('saveBtn').disabled = false;
+        setStatus('✅ Bağlı — ' + new Date().toLocaleTimeString('tr-TR'), 'status-ok');
+    } catch(e) {
+        setStatus('❌ Bağlantı hatası: ' + e.message, 'status-err');
+    }
+}
+
+// ── Sheets verisini uygulamaya yükle ────────────────────────
+function loadFromSheets(json) {
+    if (json.types && json.types.length) {
+        constructionTypes = json.types.map(t => ({
+            name:     t.TurAdi,
+            colorCSS: t.RenkCSS,
+            colorHex: parseInt((t.RenkHex || t.RenkCSS || '#475569').replace('#',''), 16)
+        }));
+        renderTypeList();
+        renderTypeSelect();
+    }
+    if (json.blocks && json.blocks.length) {
+        blockDefs.forEach(d => { if (buildings[d.name]) scene.remove(buildings[d.name].pivot); });
+        Object.keys(buildings).forEach(k => delete buildings[k]);
+        blockDefs = [];
+        json.blocks.forEach(b => {
+            const def = { name: b.BlokAdi, floors: parseInt(b.KatSayisi)||6, x: parseFloat(b.PozisyonX)||0, z: parseFloat(b.PozisyonZ)||0 };
+            blockDefs.push(def);
+            createBlockMeshes(def);
+        });
+    }
+    if (json.states && json.states.length) {
+        json.states.forEach(s => {
+            const b = buildings[s.BlokAdi];
+            if (!b) return;
+            const floorIdx = parseInt(s.KatNo) - 1;
+            if (floorIdx < 0 || floorIdx >= b.floors.length) return;
+            const mesh = b.floors[floorIdx];
+            ensureFloorHasAllTypes(mesh);
+            mesh.userData.states[s.ImalatTuru] = parseInt(s.Durum) || 0;
+        });
+    }
+    selectedBlockName = blockDefs[0]?.name || null;
+    renderBlockList();
+    refreshSceneColors();
+}
+
+// ── Tüm veriyi kaydet ───────────────────────────────────────
+async function saveToSheets() {
+    if (!sheetsConnected) { setStatus('❌ Önce bağlanın', 'status-err'); return; }
+    setStatus('⏳ Kaydediliyor...', 'status-load');
+    try {
+        const payload = buildSavePayload();
+        await gasPOST({ action: 'saveAll', data: payload });
+        // Kayıt sonrası GET ile doğrula
+        const check = await gasGET({ action: 'load' });
+        if (check.ok && check.blocks && check.blocks.length > 0) {
+            setStatus('✅ Kaydedildi — ' + new Date().toLocaleTimeString('tr-TR'), 'status-ok');
+        } else {
+            setStatus('⚠️ Kaydedildi (doğrulanamadı)', 'status-load');
+        }
+    } catch(e) {
+        setStatus('❌ Kayıt hatası: ' + e.message, 'status-err');
+    }
+}
+
+// ── Kat tıklanınca otomatik kaydet ──────────────────────────
+function autoSaveState(floor, type) {
+    if (!sheetsConnected) return;
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = setTimeout(async () => {
+        try {
+            const state = floor.userData.states[type] || 0;
+            await gasPOST({ action: 'saveState', data: { block: floor.userData.block, floor: floor.userData.floor, type, state } });
+            setStatus('✅ Otomatik kaydedildi — ' + new Date().toLocaleTimeString('tr-TR'), 'status-ok');
+        } catch(e) { /* sessizce geç */ }
+    }, 800);
+}
+
+// ── Blok silinince Sheets'ten de sil ─────────────────────────
+async function deleteBlockFromSheets(name) {
+    if (!sheetsConnected) return;
+    try { await gasPOST({ action: 'deleteBlock', blockName: name }); } catch(e) {}
+}
+
+// ── Payload builder ──────────────────────────────────────────
+function buildSavePayload() {
+    const blocks = blockDefs.map(d => ({
+        name: d.name, floors: d.floors,
+        x: buildings[d.name]?.pivot.position.x ?? d.x,
+        z: buildings[d.name]?.pivot.position.z ?? (d.z ?? 0)
+    }));
+    const states = [];
+    Object.values(buildings).forEach(b => {
+        b.floors.forEach(f => {
+            constructionTypes.forEach(t => {
+                states.push({ block: f.userData.block, floor: f.userData.floor, type: t.name, state: f.userData.states[t.name] || 0 });
+            });
+        });
+    });
+    const types = constructionTypes.map(t => ({
+        name: t.name, colorCSS: t.colorCSS,
+        colorHex: '#' + t.colorHex.toString(16).padStart(6, '0')
+    }));
+    return { blocks, states, types };
+}
+
+// ============================
+// RENDER LOOP
+// ============================
+function animate() {
+    requestAnimationFrame(animate);
+    orbitControls.update();
+    renderer.render(scene, camera);
+}
+
+function onResize() {
+    const sidebarW = window.innerWidth >= 768 ? 330 : 0;
+    const sidebarH = window.innerWidth < 768 ? document.getElementById('sidebar').offsetHeight : 0;
+    const w = window.innerWidth - sidebarW;
+    const h = window.innerHeight - sidebarH;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+}
+
+window.addEventListener('resize', onResize);
+onResize();
+
+// ============================
+// INIT UI
+// ============================
+renderBlockList();
+renderTypeList();
+renderTypeSelect();
+renderColorSwatches();
+animate();
+</script>
+</body>
+</html>
