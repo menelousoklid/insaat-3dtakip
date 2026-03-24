@@ -100,7 +100,6 @@
 </head>
 <body>
 
-<!-- ── GİRİŞ EKRANI ── -->
 <div id="loginScreen">
     <div class="login-box">
         <h1>🏗️ İNŞAAT TAKİP</h1>
@@ -120,7 +119,6 @@
 <div id="sidebar">
     <h2>🏗️ SAHA TAKİP v8</h2>
 
-    <!-- KULLANICI BADGE -->
     <div id="userBadge" style="display:none;">
         <div class="avatar" id="userAvatar">?</div>
         <div style="flex:1;">
@@ -130,12 +128,10 @@
         <span id="logoutBtn" onclick="doLogout()">Çıkış</span>
     </div>
 
-    <!-- KİLİT BUTONU -->
     <button class="btn" id="lockBtn" onclick="toggleEditLock()" style="margin-bottom:2px; background:#475569; display:none;">
         🔒 Düzenleme Kapalı — Aç
     </button>
 
-    <!-- GOOGLE SHEETS BAĞLANTISI -->
     <div class="section-title">☁️ Google Sheets Bağlantısı</div>
     <div class="add-form" id="sheetsSetup">
         <label>Apps Script Web App URL</label>
@@ -147,7 +143,6 @@
         <div id="syncStatus" style="font-size:0.68em; margin-top:6px; color:#64748b;">Bağlı değil</div>
     </div>
 
-    <!-- BLOCK MANAGEMENT -->
     <div class="section-title">📦 Blok Yönetimi</div>
     <ul id="blockList"></ul>
 
@@ -160,7 +155,6 @@
         <button class="btn btn-blue" style="margin-top:6px;" onclick="addBlock()">+ Blok Ekle</button>
     </div>
 
-    <!-- SELECTED BLOCK OPERATIONS -->
     <div class="section-title">⚙️ Seçili Blok İşlemleri</div>
     <div id="blockOpSection">
         <div class="group">
@@ -173,7 +167,6 @@
         </div>
     </div>
 
-    <!-- DRAG MODE -->
     <div id="dragSection">
         <div class="section-title">🖱️ Blok Konumu</div>
         <div class="btn-row">
@@ -182,7 +175,6 @@
         <div class="hint">Taşıma modunu açın, ardından bloğa tıklayıp sürükleyin.</div>
     </div>
 
-    <!-- TYPE MANAGEMENT -->
     <div class="section-title">🔧 İmalat Türleri</div>
     <ul id="typeList"></ul>
 
@@ -802,19 +794,18 @@ async function doLogout() {
 }
 
 // ── Yetki kontrolleri ────────────────────────────────────────
-// ── Yetki kontrolleri ────────────────────────────────────────
 
 // Sheets'ten gelen virgülle ayrılmış listeyi diziye çevir
 function parseList(val) {
     if (!val) return [];
-    return String(val).split(/[,،\s]+/).map(s => s.trim()).filter(Boolean);
+    return String(val).split(/[,،]+/).map(s => s.trim()).filter(Boolean);
 }
 
-// Büyük/küçük harf duyarsız liste kontrolü
+// Büyük/küçük harf duyarsız ve Türkçe uyumlu liste kontrolü
 function listIncludes(list, value) {
     if (!list || !value) return false;
-    const v = String(value).trim().toUpperCase();
-    return list.some(item => String(item).trim().toUpperCase() === v || item.trim() === '*');
+    const v = String(value).trim().toLocaleUpperCase('tr-TR');
+    return list.some(item => String(item).trim().toLocaleUpperCase('tr-TR') === v || item.trim() === '*');
 }
 
 function canEditBlock(blockName) {
